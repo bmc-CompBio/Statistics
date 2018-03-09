@@ -1,0 +1,392 @@
+---
+title: "Multiple Group Comparisons"
+output:
+  html_document:
+    code_folding: hide
+    keep_md: true
+---
+
+
+## Setup
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+library(gridExtra)
+library(pairwiseCI)
+library(car)
+library(agricolae)
+
+
+# create some data 
+my_samples <- c("zyg","two","eight")
+
+n_group <- 3
+
+set.seed(1)
+zyg <- rnorm(n_group, mean = 0.9, sd = 0.025)
+
+set.seed(1)
+two <- rnorm(n_group, mean = 0.6, sd = 0.1)
+
+set.seed(1)
+eight <- rnorm(n_group, mean = 0.7, sd = 0.075)
+
+
+my_data <- data.frame(fractions = c(zyg, two, eight),
+                      samples = factor(rep(my_samples, each = n_group), levels = my_samples))
+
+n_all <- nrow(my_data)
+
+my_data
+```
+
+
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+xbar <- tapply(my_data$fractions, my_data$samples, mean, na.rm = TRUE)
+
+par(mfrow=c(1,2))
+barplot(xbar, ylim=c(0,1), ylab="Fraction",  main="Errorbars? Test?")
+```
+
+
+
+## Confidence Intervals
+
+### Independent
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+### shortcut ###
+t.test(zyg)
+
+ind_CI_lower <- tapply(my_data$fractions, my_data$samples, function(x){t.test(x)$conf.int[1]})
+ind_CI_upper <- tapply(my_data$fractions, my_data$samples, function(x){t.test(x)$conf.int[2]})
+
+### details ###
+
+ind_CI_lower2 <- xbar - tapply(my_data$fractions, my_data$samples, 
+                           function(x){qt(0.975, df = n_group-1)*sd(x)/sqrt(n_group)})
+
+ind_CI_upper2 <- xbar + tapply(my_data$fractions, my_data$samples, 
+                           function(x){qt(0.975, df = n_group-1)*sd(x)/sqrt(n_group)})
+
+# check
+c(
+identical(round(as.numeric(ind_CI_lower),6), round(as.numeric(ind_CI_lower2),6)),
+identical(round(as.numeric(ind_CI_upper),6), round(as.numeric(ind_CI_upper2),6))
+)
+```
+
+### Pooled SD
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+### shortcut ###
+lm_fit <- lm(fractions ~ 0 + samples, data = my_data)
+
+summary(lm_fit)
+
+pool_CI_lower <- confint(lm_fit)[,1]
+pool_CI_upper <- confint(lm_fit)[,2]
+
+### details ###
+s <- tapply(my_data$fractions, my_data$samples, sd, na.rm = TRUE)
+s
+
+n <- tapply(!is.na(my_data$fractions), my_data$samples, sum)
+degf <- n - 1
+degf
+
+total.degf <- sum(degf)
+total.degf
+
+pooled.sd <- sqrt(sum(s^2*degf)/total.degf)
+pooled.sd
+
+pool_CI_lower2 <- xbar -  qt(0.975, df = total.degf)*pooled.sd*sqrt(1/n_group)
+pool_CI_upper2 <- xbar +  qt(0.975, df = total.degf)*pooled.sd*sqrt(1/n_group)
+
+# check
+c(
+identical(round(as.numeric(pool_CI_lower),6), round(as.numeric(pool_CI_lower2),6)),
+identical(round(as.numeric(pool_CI_upper),6), round(as.numeric(pool_CI_upper2),6))
+)
+
+```
+
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+# plot
+par(mfrow=c(1,2))
+bplot <- barplot(xbar, ylim=c(0,1), ylab="Fraction",  main="Independent")
+arrows(x0=bplot,y0=ind_CI_upper,y1=ind_CI_lower,angle=90,code=3,length=0.1)
+
+bplot <- barplot(xbar, ylim=c(0,1), ylab="Fraction",  main="Pooled")
+arrows(x0=bplot,y0=pool_CI_upper,y1=pool_CI_lower,angle=90,code=3,length=0.1)
+```
+
+
+
+
+
+
+## CI on Differences
+
+### pairwiseCI
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+# shortcut #
+pair_CI <- pairwiseCI(fractions ~ samples, data = my_data, var.equal=TRUE)
+
+pair_CI_diffs   <-  pair_CI[[1]][[1]]$estimate
+pair_CI_lower <- pair_CI[[1]][[1]]$lower
+pair_CI_upper <- pair_CI[[1]][[1]]$upper
+
+
+pair_CI
+
+
+### details ###
+pair_CI_lower2 <- c(t.test(two,zyg, var.equal = T)$conf.int[1], 
+                    t.test(eight,zyg, var.equal = T)$conf.int[1], 
+                    t.test(eight,two, var.equal = T)$conf.int[1])
+pair_CI_upper2 <- c(t.test(two,zyg, var.equal = T)$conf.int[2], 
+                    t.test(eight,zyg, var.equal = T)$conf.int[2], 
+                    t.test(eight,two, var.equal = T)$conf.int[2])
+
+# or
+my_CI <- function(x,y){
+    diff <- mean(x)-mean(y)
+    s1 <- sd(x)
+    s2 <- sd(y)
+    se <- sqrt( (1/n_group + 1/n_group) * ((n_group-1)*s1^2 + (n_group-1)*s2^2)/(n_group+n_group-2) ) 
+    df <- n_group+n_group-2
+    diff + (qt(0.975, df = df)*se)*c(-1,1) 
+}
+
+pair_CI_lower3 <- c(my_CI(two,zyg)[1],my_CI(eight,zyg)[1],my_CI(eight,two)[1])
+pair_CI_upper3 <- c(my_CI(two,zyg)[2],my_CI(eight,zyg)[2],my_CI(eight,two)[2])
+
+
+# check
+c(
+identical(round(as.numeric(pair_CI_lower),6), round(as.numeric(pair_CI_lower2),6)),
+identical(round(as.numeric(pair_CI_upper),6), round(as.numeric(pair_CI_upper2),6)),
+identical(round(as.numeric(pair_CI_lower),6), round(as.numeric(pair_CI_lower3),6)),
+identical(round(as.numeric(pair_CI_upper),6), round(as.numeric(pair_CI_upper3),6))
+)
+
+```
+
+### Anova + Tukey
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+### Anova ###
+aov_fit <- aov(fractions ~ samples, data = my_data)
+
+summary(aov_fit)
+
+### side track on anove F-stat ##
+resids <- c(zyg-mean(zyg), two-mean(two), eight-mean(eight))
+SSE <- sum(resids^2)
+MSE <-  (SSE/(length(resids)-length(my_samples)))
+MSE
+
+sqrt(MSE) == pooled.sd
+
+SST <- sum((c(zyg,two,eight)-mean(c(zyg,two,eight)))^2)
+SSR <- SST - SSE
+MSR <- (SSR/(length(my_samples)-1))
+MSR
+
+Fstat <- MSR / MSE
+Fstat
+
+pval <- pf(q = Fstat, df1 = length(my_samples)-1, df2 = n_all-length(my_samples), lower.tail = FALSE)
+pval
+
+# check
+identical(round(as.numeric(pval),6), round(as.numeric(summary(aov_fit)[[1]][1,5]),6))
+
+
+### Tukey test ##
+
+posthoc <- TukeyHSD(x=aov_fit, conf.level=0.95)
+
+posthoc
+
+tuk_diffs   <-  posthoc$samples[,1]
+tuk_CI_lower <- posthoc$samples[,2]
+tuk_CI_upper <- posthoc$samples[,3]
+
+
+# details #
+q_tukey <- qtukey(p = 0.95, nmeans = length(my_samples), df = total.degf)
+
+tuk_CI_lower2 <- tuk_diffs - (q_tukey * sqrt( (MSE/2) * (1/(n_group) + 1/(n_group))))
+tuk_CI_upper2 <- tuk_diffs + (q_tukey * sqrt( (MSE/2) * (1/(n_group) + 1/(n_group))))
+
+
+# check
+c(
+identical(round(as.numeric(tuk_CI_lower),6), round(as.numeric(tuk_CI_lower2),6)),
+identical(round(as.numeric(tuk_CI_upper),6), round(as.numeric(tuk_CI_upper2),6))
+)
+
+
+```
+
+
+```{r, message=FALSE, warning=FALSE, fig.align="center"}
+# plot
+par(mfrow=c(1,2))
+bplot <- barplot(pair_CI_diffs, ylim=c(-0.5,0.5), ylab="Fraction",  main="pairwiseCI", las=2)
+arrows(x0=bplot,y0=pair_CI_upper,y1=pair_CI_lower,angle=90,code=3,length=0.1)
+
+bplot <- barplot(tuk_diffs, ylim=c(-0.5,0.5), ylab="Fraction",  main="AOV + Tukey", las=2)
+arrows(x0=bplot,y0=tuk_CI_upper,y1=tuk_CI_lower,angle=90,code=3,length=0.1)
+```
+
+
+
+### Pair-wise t-test on Pooled SD
+
+```{r, message=FALSE, warning=FALSE}
+# no adjustment for comparison with lm
+pairdiff <- pairwise.t.test(x = my_data$fractions, g = my_data$samples, p.adjust.method = "none")
+
+# outputs p-value
+pairdiff
+```
+
+```{r, message=FALSE, warning=FALSE}
+# from the function (pooled sd same as above)
+x = my_data$fractions
+g = my_data$samples
+
+xbar <- tapply(x, g, mean, na.rm = TRUE)
+s <- tapply(x, g, sd, na.rm = TRUE)
+n <- tapply(!is.na(x), g, sum)
+degf <- n - 1
+total.degf <- sum(degf)
+pooled.sd <- sqrt(sum(s^2 * degf)/total.degf)
+dif <- xbar[2] - xbar[1]
+
+my_CI <- function(x,y){
+    dif <- mean(x) - mean(y)
+    se.dif <- pooled.sd * sqrt(1/length(x) + 1/length(y))
+    t.val <- dif/se.dif
+    pval <- 2 * pt(-abs(t.val), total.degf)
+    CI <- dif + qt(0.975, total.degf)*se.dif*c(-1,1)
+    return(CI)
+}
+
+my_pval <- function(x,y){
+    dif <- mean(x) - mean(y)
+    se.dif <- pooled.sd * sqrt(1/length(x) + 1/length(y))
+    t.val <- dif/se.dif
+    pval <- 2 * pt(-abs(t.val), total.degf)
+    return(pval)
+}
+
+pooldiff_CI_lower <- c(my_CI(two,zyg)[1],my_CI(eight,zyg)[1],my_CI(eight,two)[1])
+pooldiff_CI_upper <- c(my_CI(two,zyg)[2],my_CI(eight,zyg)[2],my_CI(eight,two)[2])
+pooldiff_pval <- c(my_pval(two,zyg)[1],my_pval(eight,zyg)[1],my_pval(eight,two)[1])
+pooldiffs <- c(mean(two)-mean(zyg), mean(eight)-mean(zyg), mean(eight)-mean(two))
+names(pooldiffs) <- names(pair_CI_diffs)
+
+```
+
+
+### Linear Regression
+
+```{r, message=FALSE, warning=FALSE}
+# fit without intercept
+lm_fit2 <- lm(fractions ~ samples, data = my_data)
+summary(lm_fit2)
+
+
+# relevel for 3rd comparison
+my_data$samples <- relevel(my_data$samples, ref = "two")
+
+lm_fit3 <- lm(fractions ~ samples, data = my_data)
+summary(lm_fit3)
+
+
+# get values 
+lm_fit_pval <- c(summary(lm_fit2)$coef[2:3,4], summary(lm_fit3)$coef[3,4]) 
+lm_fit_diffs <- c(summary(lm_fit2)$coef[2:3,1], summary(lm_fit3)$coef[3,1]) 
+names(lm_fit_diffs) <- names(pair_CI_diffs)
+lm_fit_CI_lower <- c(confint(lm_fit2)[2:3,1], confint(lm_fit3)[3,1])
+lm_fit_CI_upper <- c(confint(lm_fit2)[2:3,2], confint(lm_fit3)[3,2])
+
+
+# check
+c(
+identical(round(as.numeric(lm_fit_CI_lower),6), round(as.numeric(pooldiff_CI_lower),6)),
+identical(round(as.numeric(lm_fit_CI_upper),6), round(as.numeric(pooldiff_CI_upper),6)),
+identical(round(as.numeric(lm_fit_pval),6), round(as.numeric(pooldiff_pval),6))
+)
+
+```
+
+```{r, message=FALSE, warning=FALSE, fig.align="center", fig.width=12}
+# plot
+par(mfrow=c(1,4), cex=1.2)
+
+bplot <- barplot(pair_CI_diffs, ylim=c(-0.5,0.5), ylab="Fraction",  main="pairwiseCI", las=2)
+arrows(x0=bplot,y0=pair_CI_upper,y1=pair_CI_lower,angle=90,code=3,length=0.1)
+
+bplot <- barplot(tuk_diffs, ylim=c(-0.5,0.5), ylab="Fraction",  main="AOV + Tukey", las=2)
+arrows(x0=bplot,y0=tuk_CI_upper,y1=tuk_CI_lower,angle=90,code=3,length=0.1)
+
+bplot <- barplot(lm_fit_diffs, ylim=c(-0.5,0.5), ylab="Fraction", main="Pw t-test Pooled SD", las=2)
+arrows(x0=bplot,y0=lm_fit_CI_upper,y1=lm_fit_CI_lower,angle=90,code=3,length=0.1)
+
+bplot <- barplot(pooldiffs, ylim=c(-0.5,0.5), ylab="Fraction",  main="Linear Regression", las=2)
+arrows(x0=bplot,y0=pooldiff_CI_upper,y1=pooldiff_CI_lower,angle=90,code=3,length=0.1)
+
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+### further details ###
+
+mm <- model.matrix(lm_fit2)
+mm
+XX <- solve(t(mm) %*% mm)
+XX
+sqrt(diag(XX * MSE))
+
+
+mm <- model.matrix(lm_fit3)
+mm
+XX <- solve(t(mm) %*% mm)
+XX
+sqrt(diag(XX * MSE))
+
+
+# without intercept 
+mm <- model.matrix(lm_fit)
+mm
+XX <- solve(t(mm) %*% mm)
+XX
+sqrt(diag(XX * MSE))
+
+```
+
+
+
+Some links:
+
+https://stats.stackexchange.com/questions/210515/confidence-intervals-for-group-means-r
+
+https://stats.stackexchange.com/questions/126588/different-confidence-intervals-from-direct-calculation-and-rs-confint-function
+
+https://rstudio-pubs-static.s3.amazonaws.com/181709_eec7a5bc24c04b8badeb297c4807109a.html
+
+https://stats.stackexchange.com/questions/174861/calculating-regression-sum-of-square-in-r
+
+https://en.wikipedia.org/wiki/Tukey%27s_range_test
+
+
+
+
