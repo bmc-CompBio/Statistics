@@ -343,7 +343,10 @@ MSE</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>SST &lt;- sum((c(zyg,two,eight)-mean(c(zyg,two,eight)))^2)
 SSR &lt;- SST - SSE
-MSR &lt;- (SSR/(length(my_samples)-1))
+
+round(SSR,6) == round(sum(c(rep(xbar,3) - mean(xbar))^2),6)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>MSR &lt;- (SSR/(length(my_samples)-1))
 MSR</code></pre>
 <pre><code>## [1] 0.05144823</code></pre>
 <pre class="r"><code>Fstat &lt;- MSR / MSE
