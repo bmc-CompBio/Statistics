@@ -299,7 +299,7 @@ names(pooldiffs) <- names(pair_CI_diffs)
 ### Linear Regression
 
 ```{r, message=FALSE, warning=FALSE}
-# fit intercept
+# fit with intercept
 lm_fit2 <- lm(fractions ~ samples, data = my_data)
 summary(lm_fit2)
 

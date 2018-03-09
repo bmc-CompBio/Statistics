@@ -494,7 +494,7 @@ names(pooldiffs) <- names(pair_CI_diffs)
 
 
 ```r
-# fit intercept
+# fit with intercept
 lm_fit2 <- lm(fractions ~ samples, data = my_data)
 summary(lm_fit2)
 ```
