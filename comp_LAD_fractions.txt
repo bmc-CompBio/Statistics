@@ -1,0 +1,13 @@
+"LADs" "stage" "BComparts" "ABComparts" "fraction.LADinB" "fraction.LADinA"
+"1" "zyg_rep_1_averpop_LAD_coordinates.bed" "zyg" "B_compart_pl_zygPN5_allreps_100000_iced.matrix.bed" "AB_compart_pl_zygPN5_allreps_100000_iced.matrix.bed" 0.809485315145024 0.190514684854976
+"2" "zyg_rep_2_averpop_LAD_coordinates.bed" "zyg" "B_compart_pl_zygPN5_allreps_100000_iced.matrix.bed" "AB_compart_pl_zygPN5_allreps_100000_iced.matrix.bed" 0.885994158413337 0.114005841586663
+"3" "zyg_rep_3_averpop_LAD_coordinates.bed" "zyg" "B_compart_pl_zygPN5_allreps_100000_iced.matrix.bed" "AB_compart_pl_zygPN5_allreps_100000_iced.matrix.bed" 0.916706582684033 0.0832934173159671
+"4" "two_rep_1_averpop_LAD_coordinates.bed" "two" "B_compart_pl_twoCell_100000_iced.matrix.bed" "AB_compart_pl_twoCell_100000_iced.matrix.bed" 0.594714438592672 0.405285561407328
+"5" "two_rep_2_averpop_LAD_coordinates.bed" "two" "B_compart_pl_twoCell_100000_iced.matrix.bed" "AB_compart_pl_twoCell_100000_iced.matrix.bed" 0.613853229968238 0.386146770031762
+"6" "two_rep_3_averpop_LAD_coordinates.bed" "two" "B_compart_pl_twoCell_100000_iced.matrix.bed" "AB_compart_pl_twoCell_100000_iced.matrix.bed" 0.624376152751285 0.375623847248715
+"7" "eight_rep_1_averpop_LAD_coordinates.bed" "eight" "B_compart_pl_eightCell_100000_iced.matrix.bed" "AB_compart_pl_eightCell_100000_iced.matrix.bed" 0.775587586226777 0.224412413773223
+"8" "eight_rep_2_averpop_LAD_coordinates.bed" "eight" "B_compart_pl_eightCell_100000_iced.matrix.bed" "AB_compart_pl_eightCell_100000_iced.matrix.bed" 0.722814973664074 0.277185026335926
+"9" "eight_rep_3_averpop_LAD_coordinates.bed" "eight" "B_compart_pl_eightCell_100000_iced.matrix.bed" "AB_compart_pl_eightCell_100000_iced.matrix.bed" 0.811456513330232 0.188543486669768
+"10" "ES_rep_1_averpop_LAD_coordinates.bed" "ES" "B_compart_pl_ICM_100000_iced.matrix.bed" "AB_compart_pl_ICM_100000_iced.matrix.bed" 0.869188254261766 0.130811745738234
+"11" "ES_rep_2_averpop_LAD_coordinates.bed" "ES" "B_compart_pl_ICM_100000_iced.matrix.bed" "AB_compart_pl_ICM_100000_iced.matrix.bed" 0.85517158781794 0.14482841218206
+"12" "ES_rep_3_averpop_LAD_coordinates.bed" "ES" "B_compart_pl_ICM_100000_iced.matrix.bed" "AB_compart_pl_ICM_100000_iced.matrix.bed" 0.862472421529203 0.137527578470797

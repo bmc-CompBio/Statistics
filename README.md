@@ -18,46 +18,27 @@ library(agricolae)
 
 
 # create some data 
-my_samples <- c("zyg","two","eight")
 
-n_group <- 3
+my_data <- read.table("comp_LAD_fractions.txt", stringsAsFactors = FALSE)
+my_data <- my_data[1:9,c(2,5)]
 
-set.seed(1)
-zyg <- rnorm(n_group, mean = 0.9, sd = 0.025)
-
-set.seed(1)
-two <- rnorm(n_group, mean = 0.6, sd = 0.1)
-
-set.seed(1)
-eight <- rnorm(n_group, mean = 0.7, sd = 0.075)
+my_data$stage <- factor(my_data$stage, levels= unique(my_data$stage))
+my_samples <-levels(my_data$stage)
 
 
-my_data <- data.frame(fractions = c(zyg, two, eight),
-                      samples = factor(rep(my_samples, each = n_group), levels = my_samples))
-
+n_group <- tapply(my_data$stage, my_data$stage, length)[1]
 n_all <- nrow(my_data)
 
-my_data
-```
-
-```
-##   fractions samples
-## 1 0.8843387     zyg
-## 2 0.9045911     zyg
-## 3 0.8791093     zyg
-## 4 0.5373546     two
-## 5 0.6183643     two
-## 6 0.5164371     two
-## 7 0.6530160   eight
-## 8 0.7137732   eight
-## 9 0.6373279   eight
+for(my_sample in my_samples){
+    assign(my_sample, my_data$fraction.LADinB[my_data$stage == my_sample])
+}
 ```
 
 
 
 
 ```r
-xbar <- tapply(my_data$fractions, my_data$samples, mean, na.rm = TRUE)
+xbar <- tapply(my_data$fraction.LADinB, my_data$stage, mean, na.rm = TRUE)
 
 par(mfrow=c(1,2))
 barplot(xbar, ylim=c(0,1), ylab="Fraction",  main="Errorbars? Test?")
@@ -82,25 +63,25 @@ t.test(zyg)
 ## 	One Sample t-test
 ## 
 ## data:  zyg
-## t = 114.45, df = 2, p-value = 7.633e-05
+## t = 27.313, df = 2, p-value = 0.001338
 ## alternative hypothesis: true mean is not equal to 0
 ## 95 percent confidence interval:
-##  0.8559129 0.9227798
+##  0.733563 1.007894
 ## sample estimates:
 ## mean of x 
-## 0.8893463
+## 0.8707287
 ```
 
 ```r
-ind_CI_lower <- tapply(my_data$fractions, my_data$samples, function(x){t.test(x)$conf.int[1]})
-ind_CI_upper <- tapply(my_data$fractions, my_data$samples, function(x){t.test(x)$conf.int[2]})
+ind_CI_lower <- tapply(my_data$fraction.LADinB, my_data$stage, function(x){t.test(x)$conf.int[1]})
+ind_CI_upper <- tapply(my_data$fraction.LADinB, my_data$stage, function(x){t.test(x)$conf.int[2]})
 
 ### details ###
 
-ind_CI_lower2 <- xbar - tapply(my_data$fractions, my_data$samples, 
+ind_CI_lower2 <- xbar - tapply(my_data$fraction.LADinB, my_data$stage, 
                            function(x){qt(0.975, df = n_group-1)*sd(x)/sqrt(n_group)})
 
-ind_CI_upper2 <- xbar + tapply(my_data$fractions, my_data$samples, 
+ind_CI_upper2 <- xbar + tapply(my_data$fraction.LADinB, my_data$stage, 
                            function(x){qt(0.975, df = n_group-1)*sd(x)/sqrt(n_group)})
 
 # check
@@ -119,7 +100,7 @@ identical(round(as.numeric(ind_CI_upper),6), round(as.numeric(ind_CI_upper2),6))
 
 ```r
 ### shortcut ###
-lm_fit <- lm(fractions ~ 0 + samples, data = my_data)
+lm_fit <- lm(fraction.LADinB ~ 0 + stage, data = my_data)
 
 summary(lm_fit)
 ```
@@ -127,23 +108,23 @@ summary(lm_fit)
 ```
 ## 
 ## Call:
-## lm(formula = fractions ~ 0 + samples, data = my_data)
+## lm(formula = fraction.LADinB ~ 0 + stage, data = my_data)
 ## 
 ## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.04095 -0.02003 -0.01024  0.01524  0.06098 
+##       Min        1Q    Median        3Q       Max 
+## -0.061243 -0.016267  0.005635  0.015265  0.045978 
 ## 
 ## Coefficients:
-##              Estimate Std. Error t value Pr(>|t|)    
-## sampleszyg    0.88935    0.02288   38.88 1.93e-08 ***
-## samplestwo    0.55739    0.02288   24.37 3.14e-07 ***
-## sampleseight  0.66804    0.02288   29.20 1.07e-07 ***
+##            Estimate Std. Error t value Pr(>|t|)    
+## stagezyg    0.87073    0.02418   36.01 3.06e-08 ***
+## stagetwo    0.61098    0.02418   25.27 2.53e-07 ***
+## stageeight  0.76995    0.02418   31.84 6.38e-08 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.03962 on 6 degrees of freedom
+## Residual standard error: 0.04189 on 6 degrees of freedom
 ## Multiple R-squared:  0.998,	Adjusted R-squared:  0.997 
-## F-statistic:   986 on 3 and 6 DF,  p-value: 1.813e-08
+## F-statistic: 982.8 on 3 and 6 DF,  p-value: 1.831e-08
 ```
 
 ```r
@@ -151,17 +132,17 @@ pool_CI_lower <- confint(lm_fit)[,1]
 pool_CI_upper <- confint(lm_fit)[,2]
 
 ### details ###
-s <- tapply(my_data$fractions, my_data$samples, sd, na.rm = TRUE)
+s <- tapply(my_data$fraction.LADinB, my_data$stage, sd, na.rm = TRUE)
 s
 ```
 
 ```
 ##        zyg        two      eight 
-## 0.01345876 0.05383504 0.04037628
+## 0.05521663 0.01503797 0.04458858
 ```
 
 ```r
-n <- tapply(!is.na(my_data$fractions), my_data$samples, sum)
+n <- tapply(!is.na(my_data$fraction.LADinB), my_data$stage, sum)
 degf <- n - 1
 degf
 ```
@@ -186,7 +167,7 @@ pooled.sd
 ```
 
 ```
-## [1] 0.03962151
+## [1] 0.04188539
 ```
 
 ```r
@@ -230,7 +211,7 @@ arrows(x0=bplot,y0=pool_CI_upper,y1=pool_CI_lower,angle=90,code=3,length=0.1)
 
 ```r
 # shortcut #
-pair_CI <- pairwiseCI(fractions ~ samples, data = my_data, var.equal=TRUE)
+pair_CI <- pairwiseCI(fraction.LADinB ~ stage, data = my_data, var.equal=TRUE)
 
 pair_CI_diffs   <-  pair_CI[[1]][[1]]$estimate
 pair_CI_lower <- pair_CI[[1]][[1]]$lower
@@ -247,9 +228,9 @@ pair_CI
 ##   
 ##   
 ##           estimate   lower   upper
-## two-zyg    -0.3320 -0.4209 -0.2430
-## eight-zyg  -0.2213 -0.2895 -0.1531
-## eight-two   0.1107  0.0028  0.2185
+## two-zyg    -0.2597 -0.3515 -0.1680
+## eight-zyg  -0.1008 -0.2145  0.0130
+## eight-two   0.1590  0.0835  0.2344
 ##   
 ## 
 ```
@@ -259,6 +240,7 @@ pair_CI
 pair_CI_lower2 <- c(t.test(two,zyg, var.equal = T)$conf.int[1], 
                     t.test(eight,zyg, var.equal = T)$conf.int[1], 
                     t.test(eight,two, var.equal = T)$conf.int[1])
+
 pair_CI_upper2 <- c(t.test(two,zyg, var.equal = T)$conf.int[2], 
                     t.test(eight,zyg, var.equal = T)$conf.int[2], 
                     t.test(eight,two, var.equal = T)$conf.int[2])
@@ -295,15 +277,15 @@ identical(round(as.numeric(pair_CI_upper),6), round(as.numeric(pair_CI_upper3),6
 
 ```r
 ### Anova ###
-aov_fit <- aov(fractions ~ samples, data = my_data)
+aov_fit <- aov(fraction.LADinB ~ stage, data = my_data)
 
 summary(aov_fit)
 ```
 
 ```
 ##             Df  Sum Sq Mean Sq F value   Pr(>F)    
-## samples      2 0.17142 0.08571    54.6 0.000141 ***
-## Residuals    6 0.00942 0.00157                     
+## stage        2 0.10290 0.05145   29.32 0.000799 ***
+## Residuals    6 0.01053 0.00175                     
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -317,7 +299,7 @@ MSE
 ```
 
 ```
-## [1] 0.001569864
+## [1] 0.001754386
 ```
 
 ```r
@@ -336,7 +318,7 @@ MSR
 ```
 
 ```
-## [1] 0.08570963
+## [1] 0.05144823
 ```
 
 ```r
@@ -345,7 +327,7 @@ Fstat
 ```
 
 ```
-## [1] 54.59683
+## [1] 29.32549
 ```
 
 ```r
@@ -354,7 +336,7 @@ pval
 ```
 
 ```
-## [1] 0.0001413084
+## [1] 0.0007993341
 ```
 
 ```r
@@ -378,19 +360,19 @@ posthoc
 ##   Tukey multiple comparisons of means
 ##     95% family-wise confidence level
 ## 
-## Fit: aov(formula = fractions ~ samples, data = my_data)
+## Fit: aov(formula = fraction.LADinB ~ stage, data = my_data)
 ## 
-## $samples
-##                 diff         lwr        upr     p adj
-## two-zyg   -0.3319610 -0.43122221 -0.2326997 0.0001232
-## eight-zyg -0.2213073 -0.32056855 -0.1220461 0.0011690
-## eight-two  0.1106537  0.01139243  0.2099149 0.0326382
+## $stage
+##                 diff         lwr          upr     p adj
+## two-zyg   -0.2597474 -0.36468019 -0.154814636 0.0006633
+## eight-zyg -0.1007757 -0.20570844  0.004157115 0.0581160
+## eight-two  0.1589718  0.05403897  0.263904526 0.0083647
 ```
 
 ```r
-tuk_diffs   <-  posthoc$samples[,1]
-tuk_CI_lower <- posthoc$samples[,2]
-tuk_CI_upper <- posthoc$samples[,3]
+tuk_diffs   <-  posthoc$stage[,1]
+tuk_CI_lower <- posthoc$stage[,2]
+tuk_CI_upper <- posthoc$stage[,3]
 
 
 # details #
@@ -432,7 +414,7 @@ arrows(x0=bplot,y0=tuk_CI_upper,y1=tuk_CI_lower,angle=90,code=3,length=0.1)
 
 ```r
 # no adjustment for comparison with lm
-pairdiff <- pairwise.t.test(x = my_data$fractions, g = my_data$samples, p.adjust.method = "none")
+pairdiff <- pairwise.t.test(x = my_data$fraction.LADinB, g = my_data$stage, p.adjust.method = "none")
 
 # outputs p-value
 pairdiff
@@ -442,11 +424,11 @@ pairdiff
 ## 
 ## 	Pairwise comparisons using t tests with pooled SD 
 ## 
-## data:  my_data$fractions and my_data$samples 
+## data:  my_data$fraction.LADinB and my_data$stage 
 ## 
 ##       zyg     two    
-## two   5e-05   -      
-## eight 0.00048 0.01414
+## two   0.00027 -      
+## eight 0.02572 0.00351
 ## 
 ## P value adjustment method: none
 ```
@@ -454,8 +436,8 @@ pairdiff
 
 ```r
 # from the function (pooled sd same as above)
-x = my_data$fractions
-g = my_data$samples
+x = my_data$fraction.LADinB
+g = my_data$stage
 
 xbar <- tapply(x, g, mean, na.rm = TRUE)
 s <- tapply(x, g, sd, na.rm = TRUE)
@@ -495,60 +477,60 @@ names(pooldiffs) <- names(pair_CI_diffs)
 
 ```r
 # fit with intercept
-lm_fit2 <- lm(fractions ~ samples, data = my_data)
+lm_fit2 <- lm(fraction.LADinB ~ stage, data = my_data)
 summary(lm_fit2)
 ```
 
 ```
 ## 
 ## Call:
-## lm(formula = fractions ~ samples, data = my_data)
+## lm(formula = fraction.LADinB ~ stage, data = my_data)
 ## 
 ## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.04095 -0.02003 -0.01024  0.01524  0.06098 
+##       Min        1Q    Median        3Q       Max 
+## -0.061243 -0.016267  0.005635  0.015265  0.045978 
 ## 
 ## Coefficients:
-##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)   0.88935    0.02288  38.878 1.93e-08 ***
-## samplestwo   -0.33196    0.03235 -10.261 5.00e-05 ***
-## sampleseight -0.22131    0.03235  -6.841  0.00048 ***
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  0.87073    0.02418  36.006 3.06e-08 ***
+## stagetwo    -0.25975    0.03420  -7.595 0.000271 ***
+## stageeight  -0.10078    0.03420  -2.947 0.025722 *  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.03962 on 6 degrees of freedom
-## Multiple R-squared:  0.9479,	Adjusted R-squared:  0.9306 
-## F-statistic:  54.6 on 2 and 6 DF,  p-value: 0.0001413
+## Residual standard error: 0.04189 on 6 degrees of freedom
+## Multiple R-squared:  0.9072,	Adjusted R-squared:  0.8763 
+## F-statistic: 29.33 on 2 and 6 DF,  p-value: 0.0007993
 ```
 
 ```r
 # relevel for 3rd comparison
-my_data$samples <- relevel(my_data$samples, ref = "two")
+my_data$stage <- relevel(my_data$stage, ref = "two")
 
-lm_fit3 <- lm(fractions ~ samples, data = my_data)
+lm_fit3 <- lm(fraction.LADinB ~ stage, data = my_data)
 summary(lm_fit3)
 ```
 
 ```
 ## 
 ## Call:
-## lm(formula = fractions ~ samples, data = my_data)
+## lm(formula = fraction.LADinB ~ stage, data = my_data)
 ## 
 ## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.04095 -0.02003 -0.01024  0.01524  0.06098 
+##       Min        1Q    Median        3Q       Max 
+## -0.061243 -0.016267  0.005635  0.015265  0.045978 
 ## 
 ## Coefficients:
-##              Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)   0.55739    0.02288   24.37 3.14e-07 ***
-## sampleszyg    0.33196    0.03235   10.26 5.00e-05 ***
-## sampleseight  0.11065    0.03235    3.42   0.0141 *  
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  0.61098    0.02418  25.265 2.53e-07 ***
+## stagezyg     0.25975    0.03420   7.595 0.000271 ***
+## stageeight   0.15897    0.03420   4.648 0.003510 ** 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.03962 on 6 degrees of freedom
-## Multiple R-squared:  0.9479,	Adjusted R-squared:  0.9306 
-## F-statistic:  54.6 on 2 and 6 DF,  p-value: 0.0001413
+## Residual standard error: 0.04189 on 6 degrees of freedom
+## Multiple R-squared:  0.9072,	Adjusted R-squared:  0.8763 
+## F-statistic: 29.33 on 2 and 6 DF,  p-value: 0.0007993
 ```
 
 ```r
@@ -602,20 +584,20 @@ mm
 ```
 
 ```
-##   (Intercept) samplestwo sampleseight
-## 1           1          0            0
-## 2           1          0            0
-## 3           1          0            0
-## 4           1          1            0
-## 5           1          1            0
-## 6           1          1            0
-## 7           1          0            1
-## 8           1          0            1
-## 9           1          0            1
+##   (Intercept) stagetwo stageeight
+## 1           1        0          0
+## 2           1        0          0
+## 3           1        0          0
+## 4           1        1          0
+## 5           1        1          0
+## 6           1        1          0
+## 7           1        0          1
+## 8           1        0          1
+## 9           1        0          1
 ## attr(,"assign")
 ## [1] 0 1 1
 ## attr(,"contrasts")
-## attr(,"contrasts")$samples
+## attr(,"contrasts")$stage
 ## [1] "contr.treatment"
 ```
 
@@ -625,10 +607,10 @@ XX
 ```
 
 ```
-##              (Intercept) samplestwo sampleseight
-## (Intercept)    0.3333333 -0.3333333   -0.3333333
-## samplestwo    -0.3333333  0.6666667    0.3333333
-## sampleseight  -0.3333333  0.3333333    0.6666667
+##             (Intercept)   stagetwo stageeight
+## (Intercept)   0.3333333 -0.3333333 -0.3333333
+## stagetwo     -0.3333333  0.6666667  0.3333333
+## stageeight   -0.3333333  0.3333333  0.6666667
 ```
 
 ```r
@@ -636,8 +618,8 @@ sqrt(diag(XX * MSE))
 ```
 
 ```
-##  (Intercept)   samplestwo sampleseight 
-##   0.02287549   0.03235083   0.03235083
+## (Intercept)    stagetwo  stageeight 
+##  0.02418254  0.03419928  0.03419928
 ```
 
 ```r
@@ -646,20 +628,20 @@ mm
 ```
 
 ```
-##   (Intercept) sampleszyg sampleseight
-## 1           1          1            0
-## 2           1          1            0
-## 3           1          1            0
-## 4           1          0            0
-## 5           1          0            0
-## 6           1          0            0
-## 7           1          0            1
-## 8           1          0            1
-## 9           1          0            1
+##   (Intercept) stagezyg stageeight
+## 1           1        1          0
+## 2           1        1          0
+## 3           1        1          0
+## 4           1        0          0
+## 5           1        0          0
+## 6           1        0          0
+## 7           1        0          1
+## 8           1        0          1
+## 9           1        0          1
 ## attr(,"assign")
 ## [1] 0 1 1
 ## attr(,"contrasts")
-## attr(,"contrasts")$samples
+## attr(,"contrasts")$stage
 ## [1] "contr.treatment"
 ```
 
@@ -669,10 +651,10 @@ XX
 ```
 
 ```
-##              (Intercept) sampleszyg sampleseight
-## (Intercept)    0.3333333 -0.3333333   -0.3333333
-## sampleszyg    -0.3333333  0.6666667    0.3333333
-## sampleseight  -0.3333333  0.3333333    0.6666667
+##             (Intercept)   stagezyg stageeight
+## (Intercept)   0.3333333 -0.3333333 -0.3333333
+## stagezyg     -0.3333333  0.6666667  0.3333333
+## stageeight   -0.3333333  0.3333333  0.6666667
 ```
 
 ```r
@@ -680,8 +662,8 @@ sqrt(diag(XX * MSE))
 ```
 
 ```
-##  (Intercept)   sampleszyg sampleseight 
-##   0.02287549   0.03235083   0.03235083
+## (Intercept)    stagezyg  stageeight 
+##  0.02418254  0.03419928  0.03419928
 ```
 
 ```r
@@ -691,20 +673,20 @@ mm
 ```
 
 ```
-##   sampleszyg samplestwo sampleseight
-## 1          1          0            0
-## 2          1          0            0
-## 3          1          0            0
-## 4          0          1            0
-## 5          0          1            0
-## 6          0          1            0
-## 7          0          0            1
-## 8          0          0            1
-## 9          0          0            1
+##   stagezyg stagetwo stageeight
+## 1        1        0          0
+## 2        1        0          0
+## 3        1        0          0
+## 4        0        1          0
+## 5        0        1          0
+## 6        0        1          0
+## 7        0        0          1
+## 8        0        0          1
+## 9        0        0          1
 ## attr(,"assign")
 ## [1] 1 1 1
 ## attr(,"contrasts")
-## attr(,"contrasts")$samples
+## attr(,"contrasts")$stage
 ## [1] "contr.treatment"
 ```
 
@@ -714,10 +696,10 @@ XX
 ```
 
 ```
-##              sampleszyg samplestwo sampleseight
-## sampleszyg    0.3333333  0.0000000    0.0000000
-## samplestwo    0.0000000  0.3333333    0.0000000
-## sampleseight  0.0000000  0.0000000    0.3333333
+##             stagezyg  stagetwo stageeight
+## stagezyg   0.3333333 0.0000000  0.0000000
+## stagetwo   0.0000000 0.3333333  0.0000000
+## stageeight 0.0000000 0.0000000  0.3333333
 ```
 
 ```r
@@ -725,8 +707,8 @@ sqrt(diag(XX * MSE))
 ```
 
 ```
-##   sampleszyg   samplestwo sampleseight 
-##   0.02287549   0.02287549   0.02287549
+##   stagezyg   stagetwo stageeight 
+## 0.02418254 0.02418254 0.02418254
 ```
 
 

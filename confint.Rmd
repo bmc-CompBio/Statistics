@@ -17,32 +17,27 @@ library(agricolae)
 
 
 # create some data 
-my_samples <- c("zyg","two","eight")
 
-n_group <- 3
+my_data <- read.table("comp_LAD_fractions.txt", stringsAsFactors = FALSE)
+my_data <- my_data[1:9,c(2,5)]
 
-set.seed(1)
-zyg <- rnorm(n_group, mean = 0.9, sd = 0.025)
-
-set.seed(1)
-two <- rnorm(n_group, mean = 0.6, sd = 0.1)
-
-set.seed(1)
-eight <- rnorm(n_group, mean = 0.7, sd = 0.075)
+my_data$stage <- factor(my_data$stage, levels= unique(my_data$stage))
+my_samples <-levels(my_data$stage)
 
 
-my_data <- data.frame(fractions = c(zyg, two, eight),
-                      samples = factor(rep(my_samples, each = n_group), levels = my_samples))
-
+n_group <- tapply(my_data$stage, my_data$stage, length)[1]
 n_all <- nrow(my_data)
 
-my_data
+for(my_sample in my_samples){
+    assign(my_sample, my_data$fraction.LADinB[my_data$stage == my_sample])
+}
+
 ```
 
 
 
 ```{r, message=FALSE, warning=FALSE, fig.align="center"}
-xbar <- tapply(my_data$fractions, my_data$samples, mean, na.rm = TRUE)
+xbar <- tapply(my_data$fraction.LADinB, my_data$stage, mean, na.rm = TRUE)
 
 par(mfrow=c(1,2))
 barplot(xbar, ylim=c(0,1), ylab="Fraction",  main="Errorbars? Test?")
@@ -58,15 +53,15 @@ barplot(xbar, ylim=c(0,1), ylab="Fraction",  main="Errorbars? Test?")
 ### shortcut ###
 t.test(zyg)
 
-ind_CI_lower <- tapply(my_data$fractions, my_data$samples, function(x){t.test(x)$conf.int[1]})
-ind_CI_upper <- tapply(my_data$fractions, my_data$samples, function(x){t.test(x)$conf.int[2]})
+ind_CI_lower <- tapply(my_data$fraction.LADinB, my_data$stage, function(x){t.test(x)$conf.int[1]})
+ind_CI_upper <- tapply(my_data$fraction.LADinB, my_data$stage, function(x){t.test(x)$conf.int[2]})
 
 ### details ###
 
-ind_CI_lower2 <- xbar - tapply(my_data$fractions, my_data$samples, 
+ind_CI_lower2 <- xbar - tapply(my_data$fraction.LADinB, my_data$stage, 
                            function(x){qt(0.975, df = n_group-1)*sd(x)/sqrt(n_group)})
 
-ind_CI_upper2 <- xbar + tapply(my_data$fractions, my_data$samples, 
+ind_CI_upper2 <- xbar + tapply(my_data$fraction.LADinB, my_data$stage, 
                            function(x){qt(0.975, df = n_group-1)*sd(x)/sqrt(n_group)})
 
 # check
@@ -80,7 +75,7 @@ identical(round(as.numeric(ind_CI_upper),6), round(as.numeric(ind_CI_upper2),6))
 
 ```{r, message=FALSE, warning=FALSE, fig.align="center"}
 ### shortcut ###
-lm_fit <- lm(fractions ~ 0 + samples, data = my_data)
+lm_fit <- lm(fraction.LADinB ~ 0 + stage, data = my_data)
 
 summary(lm_fit)
 
@@ -88,10 +83,10 @@ pool_CI_lower <- confint(lm_fit)[,1]
 pool_CI_upper <- confint(lm_fit)[,2]
 
 ### details ###
-s <- tapply(my_data$fractions, my_data$samples, sd, na.rm = TRUE)
+s <- tapply(my_data$fraction.LADinB, my_data$stage, sd, na.rm = TRUE)
 s
 
-n <- tapply(!is.na(my_data$fractions), my_data$samples, sum)
+n <- tapply(!is.na(my_data$fraction.LADinB), my_data$stage, sum)
 degf <- n - 1
 degf
 
@@ -134,7 +129,7 @@ arrows(x0=bplot,y0=pool_CI_upper,y1=pool_CI_lower,angle=90,code=3,length=0.1)
 
 ```{r, message=FALSE, warning=FALSE, fig.align="center"}
 # shortcut #
-pair_CI <- pairwiseCI(fractions ~ samples, data = my_data, var.equal=TRUE)
+pair_CI <- pairwiseCI(fraction.LADinB ~ stage, data = my_data, var.equal=TRUE)
 
 pair_CI_diffs   <-  pair_CI[[1]][[1]]$estimate
 pair_CI_lower <- pair_CI[[1]][[1]]$lower
@@ -148,6 +143,7 @@ pair_CI
 pair_CI_lower2 <- c(t.test(two,zyg, var.equal = T)$conf.int[1], 
                     t.test(eight,zyg, var.equal = T)$conf.int[1], 
                     t.test(eight,two, var.equal = T)$conf.int[1])
+
 pair_CI_upper2 <- c(t.test(two,zyg, var.equal = T)$conf.int[2], 
                     t.test(eight,zyg, var.equal = T)$conf.int[2], 
                     t.test(eight,two, var.equal = T)$conf.int[2])
@@ -180,7 +176,7 @@ identical(round(as.numeric(pair_CI_upper),6), round(as.numeric(pair_CI_upper3),6
 
 ```{r, message=FALSE, warning=FALSE, fig.align="center"}
 ### Anova ###
-aov_fit <- aov(fractions ~ samples, data = my_data)
+aov_fit <- aov(fraction.LADinB ~ stage, data = my_data)
 
 summary(aov_fit)
 
@@ -213,9 +209,9 @@ posthoc <- TukeyHSD(x=aov_fit, conf.level=0.95)
 
 posthoc
 
-tuk_diffs   <-  posthoc$samples[,1]
-tuk_CI_lower <- posthoc$samples[,2]
-tuk_CI_upper <- posthoc$samples[,3]
+tuk_diffs   <-  posthoc$stage[,1]
+tuk_CI_lower <- posthoc$stage[,2]
+tuk_CI_upper <- posthoc$stage[,3]
 
 
 # details #
@@ -251,7 +247,7 @@ arrows(x0=bplot,y0=tuk_CI_upper,y1=tuk_CI_lower,angle=90,code=3,length=0.1)
 
 ```{r, message=FALSE, warning=FALSE}
 # no adjustment for comparison with lm
-pairdiff <- pairwise.t.test(x = my_data$fractions, g = my_data$samples, p.adjust.method = "none")
+pairdiff <- pairwise.t.test(x = my_data$fraction.LADinB, g = my_data$stage, p.adjust.method = "none")
 
 # outputs p-value
 pairdiff
@@ -259,8 +255,8 @@ pairdiff
 
 ```{r, message=FALSE, warning=FALSE}
 # from the function (pooled sd same as above)
-x = my_data$fractions
-g = my_data$samples
+x = my_data$fraction.LADinB
+g = my_data$stage
 
 xbar <- tapply(x, g, mean, na.rm = TRUE)
 s <- tapply(x, g, sd, na.rm = TRUE)
@@ -300,14 +296,14 @@ names(pooldiffs) <- names(pair_CI_diffs)
 
 ```{r, message=FALSE, warning=FALSE}
 # fit with intercept
-lm_fit2 <- lm(fractions ~ samples, data = my_data)
+lm_fit2 <- lm(fraction.LADinB ~ stage, data = my_data)
 summary(lm_fit2)
 
 
 # relevel for 3rd comparison
-my_data$samples <- relevel(my_data$samples, ref = "two")
+my_data$stage <- relevel(my_data$stage, ref = "two")
 
-lm_fit3 <- lm(fractions ~ samples, data = my_data)
+lm_fit3 <- lm(fraction.LADinB ~ stage, data = my_data)
 summary(lm_fit3)
 
 
